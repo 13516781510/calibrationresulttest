@@ -2,91 +2,81 @@
 #include <opencv2/opencv.hpp>
 #include<opencv2/imgproc.hpp>
 #include "CameraParams_1_1.h"
-double baseline = std::sqrt(-89.4549989460323* -89.4549989460323 + 0.653359338122292 * 0.653359338122292 + 2.37565471579666 * 2.37565471579666);
+
+double baseline = std::sqrt(-89.4549989460323 * -89.4549989460323 + 0.653359338122292 * 0.653359338122292 +
+                            2.37565471579666 * 2.37565471579666);
 using namespace cv;
 using namespace std;
-
-// ——————————————————————————
-typedef struct
-{
-	cv::Point2i cpt;
-	int agl;
-}CptAgl;
-CptAgl  CptAgl1;
-CptAgl  CptAgl2;
-
-//显示图片
-void DisplayImage(String winname, cv::Mat img)
-{
-	cv::namedWindow(winname, WINDOW_NORMAL);
-	cv::imshow(winname, img);
-	cv::waitKey();
-}
-// 图像拼接
-Mat ConcatImage(cv::Mat& img1, cv::Mat& img2)
-{
-	cv::Mat retMat;
-	// 图像拼接
-	hconcat(img1, img2, retMat);
-	// 绘制横线
-	int nLineCount = 10;
-	double nStepHeight = retMat.size().height / (double)nLineCount;
-	for (int i = 1;i < nLineCount;i++)
-	{
-		line(retMat, Point(-1, i * nStepHeight),
-		     Point(retMat.size().width, i * nStepHeight), Scalar(0, 255, 0), 4, LINE_AA);
-	}
-	return Mat(retMat);
-}
-// 绘制第几个轮廓的特征
-void calculate(double x1,double y1,double x2,double y2){
-	double d = x2-x1;
-	double z  = -baseline*2117.53611159527/(d);
-	double x = z*(x1-573.683521813225)/2117.53611159527;
-	double y = -z*(y1-564.320552825790)/2117.73147357458;
-	printf("x:%f,y:%f,z:%f\n",x,y,z);
-}
 // ——————————————————————————
 
 //摄像头的分辨率/图片尺寸
 cv::Size imageSize = cv::Size(IMAGEWIDTH, IMAGEHEIGHT);
 cv::Mat cameraMatrix1 = CAMERAMATRIXLEFT;
-//对应Matlab所得1相机畸变参数K1K2P1P2K3
-cv::Mat distCoeffs1 = DISTORTION57;
-//对应matlab里的2相机内参矩阵（需要转置）
 cv::Mat cameraMatrix2 = CAMERAMATRIXRIGHT;
-//对应Matlab所得2相机畸变参数
-cv::Mat distCoeffs2 = DISTORTION82;
+
+//对应Matlab所得1相机畸变参数K1K2P1P2K3
+cv::Mat distCoeffs1 = DISTORTIONLEFT;
+cv::Mat distCoeffs2 = DISTORTIONRIGHT;
+
 //R旋转矩阵
-cv::Mat R = ROT57_82;
+cv::Mat R = ROTRIGHT_LEFT;
 //T平移矩阵
-cv::Mat T = TRAN57_82;
+cv::Mat T = TRANRIGHT_LEFT;
 //映射表
 cv::Mat map1x, map1y, map2x, map2y;
 //校正旋转矩阵R，投影矩阵P 重投影矩阵Q
 cv::Mat R1, R2, P1, P2, Q;
 //图像校正之后，会对图像进行裁剪，这里的validROI就是指裁剪之后的区域
 cv::Rect validROI1, validROI2;
+// ——————————————————————————
+typedef struct {
+	cv::Point2i cpt;
+	int agl= 0;
+} CptAgl;
+CptAgl CptAgl1;
+CptAgl CptAgl2;
 
-int main()
-{
+//显示图片
+void DisplayImage(String winname, cv::Mat img) {
+	cv::namedWindow(winname, WINDOW_NORMAL);
+	cv::imshow(winname, img);
+	cv::waitKey();
+}
 
+// 图像拼接
+Mat ConcatImage(cv::Mat &img1, cv::Mat &img2) {
+	cv::Mat retMat;
+	// 图像拼接
+	hconcat(img1, img2, retMat);
+	// 绘制横线
+	int nLineCount = 10;
+	double nStepHeight = retMat.size().height / (double) nLineCount;
+	for (int i = 1; i < nLineCount; i++) {
+		line(retMat, Point(-1, i * nStepHeight),
+		     Point(retMat.size().width, i * nStepHeight), Scalar(0, 255, 0), 4, LINE_AA);
+	}
+	return Mat(retMat);
+}
+
+void calculate(double x1, double y1, double x2, double y2) {
+	double d = x2 - x1;
+	double z = -baseline * 2117.53611159527 / (d);
+	double x = z * (x1 - 573.683521813225) / 2117.53611159527;
+	double y = -z * (y1 - 564.320552825790) / 2117.73147357458;
+	printf("x:%f,y:%f,z:%f\n", x, y, z);
+}
+int main() {
 	// 读取图片
 	cv::Mat imgL = cv::imread("C:\\Users\\29451\\Desktop\\calibrationresulttest\\cam1_4774.png");
 	cv::Mat imgR = cv::imread("C:\\Users\\29451\\Desktop\\calibrationresulttest\\cam0_4775.png");
-
-
-	 //图像拼接并显示
+	//图像拼接并显示
 	//DisplayImage("左右相机：原始图像", ConcatImage(imgL, imgR));
-
-	// ——————————————————————————
-
 	// 计算两相机校正后的旋转矩阵
-	cv::stereoRectify(cameraMatrix1, distCoeffs1, cameraMatrix2, distCoeffs2, imageSize, R, T, R1, R2, P1, P2, Q, cv::CALIB_ZERO_DISPARITY,//这里是CALIB_ZERO_DISPARITY 而不是0
-	              -1, imageSize, &validROI1, &validROI2);
+	cv::stereoRectify(cameraMatrix1, distCoeffs1, cameraMatrix2, distCoeffs2, imageSize, R, T, R1, R2, P1, P2, Q,
+	                  cv::CALIB_ZERO_DISPARITY,//这里是CALIB_ZERO_DISPARITY 而不是0
+	                  -1, imageSize, &validROI1, &validROI2);
 	cv::initUndistortRectifyMap(cameraMatrix1, distCoeffs1, R1, P1, imageSize, CV_32FC1, map1x, map1y);
 	cv::initUndistortRectifyMap(cameraMatrix2, distCoeffs2, R2, P2, imageSize, CV_32FC1, map2x, map2y);
-#if 1
 
 	// 从图像校正开始计时
 	double timeZero = double(getTickCount());
@@ -94,10 +84,6 @@ int main()
 	// remap后，两相机图像行对齐
 	cv::remap(imgL, imgL, map1x, map1y, cv::INTER_LINEAR);
 	cv::remap(imgR, imgR, map2x, map2y, INTER_LINEAR);
-
-	// 显示校正后的图像
-	//DisplayImage("左相机：校正后", imgL);
-	//DisplayImage("右相机：校正后", imgR);
 
 	// 图像拼接并显示
 	//DisplayImage("左右相机：校正后图像", ConcatImage(imgL, imgR));
@@ -132,22 +118,22 @@ int main()
 			CptAgl1.cpt = minRect.center;
 			CptAgl1.agl = minRect.angle;
 			if (minRect.size.height < 0.5 * img.rows && minRect.size.width < 0.5 * img.cols) {
-			// 获取矩形的四个顶点
-			cv::Point2f rect_points[4];
-			minRect.points(rect_points);
+				// 获取矩形的四个顶点
+				cv::Point2f rect_points[4];
+				minRect.points(rect_points);
 
-			// 在原图上绘制矩形
-			for (int j = 0; j < 4; j++) {
-				cv::line(img, rect_points[j], rect_points[(j + 1) % 4], cv::Scalar(0, 255, 0), 2);
-				// 格式化角点坐标
-				std::string label = "(" + std::to_string(static_cast<int>(rect_points[j].x)) + ", " +
-				                    std::to_string(static_cast<int>(rect_points[j].y)) + ")";
+				// 在原图上绘制矩形
+				for (int j = 0; j < 4; j++) {
+					cv::line(imgL, rect_points[j], rect_points[(j + 1) % 4], cv::Scalar(0, 255, 0), 2);
+					// 格式化角点坐标
+					std::string label = "(" + std::to_string(static_cast<int>(rect_points[j].x)) + ", " +
+					                    std::to_string(static_cast<int>(rect_points[j].y)) + ")";
 
-				// 绘制角点坐标
-				cv::putText(img, label, rect_points[j], cv::FONT_HERSHEY_SIMPLEX, 1 ,cv::Scalar(255, 0, 0), 1);
-			}
-			//DisplayImage("查找轮廓", img);
-			cv::imwrite("left.jpg",img);
+					// 绘制角点坐标
+					cv::putText(imgL, label, rect_points[j], cv::FONT_HERSHEY_SIMPLEX, 1, cv::Scalar(255, 0, 0), 1);
+				}
+				//DisplayImage("查找轮廓", img);
+				cv::imwrite("left.jpg", imgL);
 			}
 		}
 	}
@@ -194,33 +180,19 @@ int main()
 					cv::putText(imgR, label, rect_points[j], cv::FONT_HERSHEY_SIMPLEX, 1, cv::Scalar(255, 0, 0), 1);
 				}
 				//DisplayImage("查找轮廓", imgR);
-				cv::imwrite("right.jpg",imgR);
+				cv::imwrite("right.jpg", imgR);
 			}
 		}
 	}
-
-	// canny算子提取轮廓
-//	cv::Canny(img, img, 70, 180, 3, false);
-//	DisplayImage("Canny边缘检测（未高斯滤波）", img);
-//
-//	// 形态学处理，膨胀运算
-//	cv::Mat kernel = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(3, 3));
-//	cv::dilate(img, img, kernel);
-//	DisplayImage("形态学处理", img);
-
-	//DisplayImage("轮廓特征", img);
-	//位姿计算
-	calculate(670,402,366,403);
-	calculate(882,400,579,401);
-	calculate(673,614,371,614);
-	calculate(885,612,581,611);
-	cout << "Time: " << ((double)getTickCount() - timeZero) / getTickFrequency() * 1000 << "ms" << endl;
+	calculate(670, 402, 366, 403);
+	calculate(882, 400, 579, 401);
+	calculate(673, 614, 371, 614);
+	calculate(885, 612, 581, 611);
+	cout << "Time: " << ((double) getTickCount() - timeZero) / getTickFrequency() * 1000 << "ms" << endl;
 	//
 	//	x:-91.059108,y:48.526445,z:-625.399430
 	//	x:-29.429552,y:-14.719702,z:-627.470289
 	//	x:-91.642686,y:-14.034174,z:-623.342195
-
-#endif
 	waitKey(0);
 	return 0;
 }
