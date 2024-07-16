@@ -2,9 +2,9 @@
 #include <opencv2/opencv.hpp>
 #include<opencv2/imgproc.hpp>
 #include "CameraParams_1_1.h"
-
-double baseline = std::sqrt(-89.4549989460323 * -89.4549989460323 + 0.653359338122292 * 0.653359338122292 +
-                            2.37565471579666 * 2.37565471579666);
+// 第一行第一列的元素
+double baseline = std::sqrt(TR[0] *TR[0] + TR[1]*TR[1] +
+		                            TR[2]*TR[2]);
 using namespace cv;
 using namespace std;
 // ——————————————————————————
@@ -60,15 +60,17 @@ Mat ConcatImage(cv::Mat &img1, cv::Mat &img2) {
 
 void calculate(double x1, double y1, double x2, double y2) {
 	double d = x2 - x1;
-	double z = -baseline * 2117.53611159527 / (d);
-	double x = z * (x1 - 573.683521813225) / 2117.53611159527;
-	double y = -z * (y1 - 564.320552825790) / 2117.73147357458;
-	printf("x:%f,y:%f,z:%f\n", x, y, z);
+	double z = -baseline * 3436.80977676613 / (d);
+	double x = z * (x1 - 634.187357284778) /  3436.80977676613;
+	double y = -z * (y1 - 567.944124514720) / 3436.32411948901;
+	printf("%f,%f,%f\n", x, y, z);
 }
 int main() {
 	// 读取图片
-	cv::Mat imgL = cv::imread("C:\\Users\\29451\\Desktop\\calibrationresulttest\\cam1_4774.png");
-	cv::Mat imgR = cv::imread("C:\\Users\\29451\\Desktop\\calibrationresulttest\\cam0_4775.png");
+//	cv::Mat imgL = cv::imread("C:\\Users\\29451\\Desktop\\calibrationresulttest\\cam1_4774.png");
+//	cv::Mat imgR = cv::imread("C:\\Users\\29451\\Desktop\\calibrationresulttest\\cam0_4775.png");
+	cv::Mat imgL = cv::imread("C:\\Users\\29451\\Desktop\\calibrationresulttest\\left.jpg");
+	cv::Mat imgR = cv::imread("C:\\Users\\29451\\Desktop\\calibrationresulttest\\right.jpg");
 	//图像拼接并显示
 	//DisplayImage("左右相机：原始图像", ConcatImage(imgL, imgR));
 	// 计算两相机校正后的旋转矩阵
@@ -93,15 +95,15 @@ int main() {
 	Mat img = imgL.clone();
 	// 转为灰度图
 	cv::cvtColor(img, img, cv::COLOR_BGR2GRAY);
-	//DisplayImage("高斯滤波前", img);
+	DisplayImage("高斯滤波前", img);
 	// 高斯滤波
 	cv::GaussianBlur(img, img, cv::Size(5, 5), 3, 3);
 	//DisplayImage("高斯滤波后", img);
 
 	// 二值化
 	cv::Mat binary;
-	cv::threshold(img, binary, 60, 255, cv::THRESH_BINARY);
-	//DisplayImage("二值化", binary);
+	cv::threshold(img, binary, 140, 255, cv::THRESH_BINARY);
+	DisplayImage("二值化", binary);
 	// 查找轮廓
 	std::vector<std::vector<cv::Point>> contours;
 	cv::findContours(binary, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
@@ -147,12 +149,12 @@ int main() {
 	//DisplayImage("高斯滤波前", img);
 	// 高斯滤波
 	cv::GaussianBlur(imgRc, imgRc, cv::Size(5, 5), 3, 3);
-	//DisplayImage("高斯滤波后", img);
+	DisplayImage("高斯滤波后", imgRc);
 
 	// 二值化
 	cv::Mat binaryR;
-	cv::threshold(imgRc, binaryR, 60, 255, cv::THRESH_BINARY);
-	//DisplayImage("二值化", binaryR);
+	cv::threshold(imgRc, binaryR, 140, 255, cv::THRESH_BINARY);
+	DisplayImage("二值化", binaryR);
 	// 查找轮廓
 	std::vector<std::vector<cv::Point>> contoursR;
 	cv::findContours(binaryR, contoursR, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
@@ -184,15 +186,17 @@ int main() {
 			}
 		}
 	}
-	calculate(670, 402, 366, 403);
-	calculate(882, 400, 579, 401);
-	calculate(673, 614, 371, 614);
-	calculate(885, 612, 581, 611);
+	calculate(699, 741, 396,741);
+	calculate(858, 603, 559,600);
+	calculate(995, 760, 700, 760);
+	calculate(837, 899, 536, 901);
+	//	18.637053,-49.769723,988.264043
+	//	65.218913,-10.216712,1001.484967
+	//	106.566293,-56.731868,1015.064424
+	//	58.706833,-95.842097,994.830582
 	cout << "Time: " << ((double) getTickCount() - timeZero) / getTickFrequency() * 1000 << "ms" << endl;
 	//
-	//	x:-91.059108,y:48.526445,z:-625.399430
-	//	x:-29.429552,y:-14.719702,z:-627.470289
-	//	x:-91.642686,y:-14.034174,z:-623.342195
+
 	waitKey(0);
 	return 0;
 }
